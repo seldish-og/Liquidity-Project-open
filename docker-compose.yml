@@ -6,9 +6,18 @@ services:
     container_name: "liquidity-contract-connector"
     ports:
       - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     networks:
       - custom
 
+  liquidity-admin-tgbot:
+    image: liquidity-admin
+    container_name: "liquidity-contract-tgbot"
+
+    networks:
+      - custom
 networks:
   custom:
     driver: bridge

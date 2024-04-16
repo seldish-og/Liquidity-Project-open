@@ -10,7 +10,7 @@ from spam_bot import send_message_to_everyone
 
 db_name = DB_FILENAME
 table_name = AUCTIONS_TABLE_NAME
-MY_CONTRACT_API_URL = "http://localhost:3000/get_all_auctions"
+MY_CONTRACT_API_URL = "http://host.docker.internal:host-gateway:3000/get_all_auctions"
 
 
 def auction_exists(conn, auction: dict):

@@ -1,15 +1,19 @@
 import json
 
 import requests
+from app.config import CONTRACT_URL
 
 
 def get_last_deal():
-    all_deals = requests.get("http://localhost:3000/get_all_deals").json()
+    print(CONTRACT_URL)
+
+    all_deals = requests.get(f"{CONTRACT_URL}/get_all_deals").json()
 
     return all_deals[0]
 
 
 def get_all_deal():
-    all_deals = requests.get("http://localhost:3000/get_all_deals").json()
+    print(CONTRACT_URL)
+    all_deals = requests.get(f"{CONTRACT_URL}/get_all_deals").json()
 
     return all_deals

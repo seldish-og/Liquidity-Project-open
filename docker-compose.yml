@@ -2,7 +2,7 @@ version: "3.0"
 
 services:
   liquidity-contract-connector:
-    image: markaurelius/liquidity-contract-connector:latest
+    image: liquidity-contract-connector
     container_name: "liquidity-contract-connector"
     ports:
       - "3000:3000"
@@ -13,7 +13,7 @@ services:
       - custom
 
   liquidity-admin-tgbot:
-    image: liquidity-admin
+    image: liquidity-admin-tgbot
     container_name: "liquidity-contract-tgbot"
 
     networks:

@@ -1,0 +1,14 @@
+version: "3.0"
+
+services:
+  liquidity-contract-connector:
+    image: markaurelius/liquidity-contract-connector:latest
+    container_name: "liquidity-contract-connector"
+    ports:
+      - "3000:3000"
+    networks:
+      - custom
+
+networks:
+  custom:
+    driver: bridge

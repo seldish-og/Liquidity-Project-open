@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "target": "es2020",
+      "module": "commonjs",
+      "strict": true,
+      "sourceMap": true,
+      "lib": ["dom", "dom.iterable"],
+      "types": ["node"]
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules"]
+}

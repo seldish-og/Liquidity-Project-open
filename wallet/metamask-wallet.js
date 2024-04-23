@@ -66,12 +66,38 @@ var express = require("express");
 var tiny_typed_emitter_1 = require("tiny-typed-emitter");
 var MetamaskWallet = /** @class */ (function (_super) {
     __extends(MetamaskWallet, _super);
+    // private _contractInterface = new utils.Interface([
+    // 	'event AuctionStarted(uint256 auctionId, address borrower, address lpToken, uint256 lockIndex, uint256 dealAmount, uint256 interestRate, uint256 loanDuration)',
+    // 	'event DealInitialized(uint256 dealId, address borrower, address lpToken, uint256 lockIndex, uint256 dealAmount, uint256 interestRate, uint256 loanDuration)',
+    // 	'function initializeDeal(address lpToken, uint256 lockIndex, uint256 dealType, uint256 dealAmount, uint256 interestRate, uint256 loanDuration) nonpayable',
+    // 	'function activateDeal(uint256 dealId) external',
+    // 	'function makeDeal(uint256 dealId) external payable',
+    // 	'function cancelDeal(uint256 dealId) nonpayable',
+    // 	'function repayLoan(uint256 dealId) payable',
+    // 	'function claimCollateral(uint256 dealId) nonpayable',
+    // 	'function startAuction(address lpToken, uint256 lockIndex, uint256 amount, uint256 startPrice, uint256 duration) nonpayable',
+    // 	'function makeBid(uint256 auctionId) nonpayable',
+    // 	'function withdrawAuctionLiquidity(uint256 auctionId) nonpayable',
+    // 	'function claimAuction(uint256 auctionId) nonpayable',
+    // 	// Определения функций из UniswapV2Locker
+    // 	'function getUserNumLockedTokens(address) view returns (uint256)',
+    // 	'function getUserLockedTokenAtIndex(address, uint256) view returns (address)',
+    // 	'function getUserNumLocksForToken(address, address) view returns (uint256)',
+    // 	'function getUserLockForTokenAtIndex(address, address, uint256) view returns (uint256, uint256, uint256, uint256, uint256, address)',
+    // 	//read methods
+    // 	'function getUserDeals(address) external view returns (uint256[])',
+    // 	'function getUserAuction(address) external view returns (uint256[])',
+    // 	'function nextAuctionId() view returns (uint256)',
+    // 	'function getAuction(uint256 auctionId) view returns (address owner, address highestBidOwner, address lpToken, uint256 lockIndex, uint256 startPrice, uint256 duration, uint256 startTime, bool isActive)',
+    // 	'function nextDealId() view returns (uint256)',
+    // 	'function getDeal(uint256) view returns (address, address, uint256, uint256, uint256, uint256, uint256, uint256, address, bool, bool)'
+    // ]);
     function MetamaskWallet() {
         var _this = _super.call(this) || this;
         _this.name = 'metamask';
         _this._chain = 'eth';
         _this.contracts = {
-            STAKE: '0x8fd624352279579a7c70814A4774c6772A9B99ab',
+            STAKE: '0x73eaD24A83df34dFAE3f7A18900266Abba351D4a',
             UNCX: '0xaDB2437e6F65682B85F814fBc12FeC0508A7B1D0'
         };
         _this._networks = {
@@ -91,30 +117,7 @@ var MetamaskWallet = /** @class */ (function (_super) {
             }
         };
         _this.instances = new Map();
-        _this._contractInterface = new ethers_1.utils.Interface([
-            'function initializeDeal(address lpToken, uint256 lockIndex, uint256 dealType, uint256 dealAmount, uint256 interestRate, uint256 loanDuration) nonpayable',
-            'function activateDeal(uint256 dealId) external',
-            'function makeDeal(uint256 dealId) external payable',
-            'function cancelDeal(uint256 dealId) nonpayable',
-            'function repayLoan(uint256 dealId) payable',
-            'function claimCollateral(uint256 dealId) nonpayable',
-            'function startAuction(address lpToken, uint256 lockIndex, uint256 amount, uint256 startPrice, uint256 duration) nonpayable',
-            'function makeBid(uint256 auctionId) nonpayable',
-            'function withdrawAuctionLiquidity(uint256 auctionId) nonpayable',
-            'function claimAuction(uint256 auctionId) nonpayable',
-            // Определения функций из UniswapV2Locker
-            'function getUserNumLockedTokens(address) view returns (uint256)',
-            'function getUserLockedTokenAtIndex(address, uint256) view returns (address)',
-            'function getUserNumLocksForToken(address, address) view returns (uint256)',
-            'function getUserLockForTokenAtIndex(address, address, uint256) view returns (uint256, uint256, uint256, uint256, uint256, address)',
-            //read methods
-            'function getUserDeals(address) external view returns (uint256[])',
-            'function getUserAuction(address) external view returns (uint256[])',
-            'function nextAuctionId() view returns (uint256)',
-            'function getAuction(uint256 auctionId) view returns (address owner, address highestBidOwner, address lpToken, uint256 lockIndex, uint256 startPrice, uint256 duration, uint256 startTime, bool isActive)',
-            'function nextDealId() view returns (uint256)',
-            'function getDeal(uint256) view returns (address, address, uint256, uint256, uint256, uint256, uint256, uint256, address, bool, bool)'
-        ]);
+        _this._contractInterface = require("./abi.json");
         _this.setInstances(_this._networks[_this._chain]);
         _this._provider = new ethers_1.ethers.providers.JsonRpcProvider(_this._networks[_this._chain].rpcUrl);
         return _this;
@@ -131,7 +134,7 @@ var MetamaskWallet = /** @class */ (function (_super) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
                         provider = new ethers_1.ethers.providers.JsonRpcProvider('https://eth-sepolia.g.alchemy.com/v2/1NmwpIhZyYUqzGibxMvMmrLYpqCudm4h');
-                        signer = provider.getSigner("0x8fd624352279579a7c70814A4774c6772A9B99ab");
+                        signer = provider.getSigner("0x73eaD24A83df34dFAE3f7A18900266Abba351D4a");
                         return [4 /*yield*/, signer.getAddress()];
                     case 1:
                         address = _a.sent();
@@ -139,6 +142,9 @@ var MetamaskWallet = /** @class */ (function (_super) {
                         // const address = "0x8fd624352279579a7c70814A4774c6772A9B99ab"
                         this.address = address;
                         this._signer = signer;
+                        console.log("object");
+                        this.subscribeToDealActivated();
+                        console.log("sds");
                         return [3 /*break*/, 3];
                     case 2:
                         error_1 = _a.sent();
@@ -293,6 +299,15 @@ var MetamaskWallet = /** @class */ (function (_super) {
             });
         });
     };
+    MetamaskWallet.prototype.subscribeToDealActivated = function () {
+        var contract = new ethers_1.ethers.Contract(this.contracts.STAKE, this._contractInterface, this._provider);
+        contract.on("AuctionActivated", function (auctionId, activator) {
+            console.log("Deal activated with ID:", auctionId.toString());
+            // Now you have the deal ID, you can cancel it or perform any other action
+            // Call cancelDeal function with the obtained deal ID
+            // this.cancelDeal(dealId);
+        });
+    };
     MetamaskWallet.prototype.getAllDeals = function () {
         return __awaiter(this, void 0, void 0, function () {
             var contract, nextDealId, dealsPromises, i, resolvedDeals, e_2;
@@ -410,26 +425,24 @@ var MetamaskWallet = /** @class */ (function (_super) {
 exports.MetamaskWallet = MetamaskWallet;
 var app = express();
 var wallet = new MetamaskWallet();
+wallet.connect();
 app.get('/get_all_deals', function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var allDeals, e_4;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 3, , 4]);
-                return [4 /*yield*/, wallet.connect()];
-            case 1:
-                _a.sent();
+                _a.trys.push([0, 2, , 3]);
                 return [4 /*yield*/, wallet.getAllDeals()];
-            case 2:
+            case 1:
                 allDeals = _a.sent();
                 console.log(allDeals);
                 res.send(allDeals);
-                return [3 /*break*/, 4];
-            case 3:
+                return [3 /*break*/, 3];
+            case 2:
                 e_4 = _a.sent();
                 res.status(500).send('Error connecting to wallet');
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
         }
     });
 }); });
@@ -438,21 +451,18 @@ app.get('/get_all_auctions', function (req, res) { return __awaiter(void 0, void
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 3, , 4]);
-                return [4 /*yield*/, wallet.connect()];
-            case 1:
-                _a.sent();
+                _a.trys.push([0, 2, , 3]);
                 return [4 /*yield*/, wallet.getAllAuctions()];
-            case 2:
+            case 1:
                 allAuctions = _a.sent();
                 console.log(allAuctions);
                 res.send(allAuctions);
-                return [3 /*break*/, 4];
-            case 3:
+                return [3 /*break*/, 3];
+            case 2:
                 e_5 = _a.sent();
                 res.status(500).send('Error connecting to wallet');
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
         }
     });
 }); });
@@ -461,21 +471,18 @@ app.get('/accept_deal', function (req, res) { return __awaiter(void 0, void 0, v
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 3, , 4]);
-                return [4 /*yield*/, wallet.connect()];
-            case 1:
-                _a.sent();
+                _a.trys.push([0, 2, , 3]);
                 return [4 /*yield*/, wallet.makeDeal(Number(req.query.deal_id))];
-            case 2:
+            case 1:
                 accepted_deal = _a.sent();
                 console.log(accepted_deal);
                 res.send(accepted_deal);
-                return [3 /*break*/, 4];
-            case 3:
+                return [3 /*break*/, 3];
+            case 2:
                 e_6 = _a.sent();
                 res.status(500).send('Error connecting to wallet');
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
         }
     });
 }); });
@@ -484,22 +491,19 @@ app.get('/cancel_deal', function (req, res) { return __awaiter(void 0, void 0, v
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 3, , 4]);
-                return [4 /*yield*/, wallet.connect()];
-            case 1:
-                _a.sent();
+                _a.trys.push([0, 2, , 3]);
                 console.log(Number(req.query.deal_id));
                 return [4 /*yield*/, wallet.cancelDeal(Number(req.query.deal_id))];
-            case 2:
+            case 1:
                 canceled_deal = _a.sent();
                 console.log(canceled_deal);
                 res.send(canceled_deal);
-                return [3 /*break*/, 4];
-            case 3:
+                return [3 /*break*/, 3];
+            case 2:
                 e_7 = _a.sent();
                 res.status(500).send('Error connecting to wallet');
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
         }
     });
 }); });

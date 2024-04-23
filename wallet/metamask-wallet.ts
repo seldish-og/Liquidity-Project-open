@@ -1,5 +1,6 @@
-import { ethers, providers, Signer, utils } from 'ethers';
+import { ethers, providers, Signer } from 'ethers';
 import * as express from 'express';
+import sqlite3 from 'sqlite3';
 import { TypedEmitter } from 'tiny-typed-emitter';
 import {
 	Chain,
@@ -8,13 +9,12 @@ import {
 	WalletEvents
 } from './types';
 import { Auction, Deal } from './wallet';
-
 export class MetamaskWallet extends TypedEmitter<WalletEvents> {
 	public address?: string;
 	public readonly name = 'metamask';
 	public _chain: Chain = 'eth';
 	private readonly contracts = {
-		STAKE: '0x8fd624352279579a7c70814A4774c6772A9B99ab',
+		STAKE: '0x73eaD24A83df34dFAE3f7A18900266Abba351D4a',
 		UNCX: '0xaDB2437e6F65682B85F814fBc12FeC0508A7B1D0'
 	};
 	private readonly _networks: NetworkConfig = {
@@ -36,32 +36,7 @@ export class MetamaskWallet extends TypedEmitter<WalletEvents> {
 	public readonly instances = new Map<Chain, providers.Provider>();
 	private _provider?: any;
 	private _signer?: Signer;
-	private _contractInterface = new utils.Interface([
-		'function initializeDeal(address lpToken, uint256 lockIndex, uint256 dealType, uint256 dealAmount, uint256 interestRate, uint256 loanDuration) nonpayable',
-		'function activateDeal(uint256 dealId) external',
-		'function makeDeal(uint256 dealId) external payable',
-		'function cancelDeal(uint256 dealId) nonpayable',
-		'function repayLoan(uint256 dealId) payable',
-		'function claimCollateral(uint256 dealId) nonpayable',
-		'function startAuction(address lpToken, uint256 lockIndex, uint256 amount, uint256 startPrice, uint256 duration) nonpayable',
-		'function makeBid(uint256 auctionId) nonpayable',
-		'function withdrawAuctionLiquidity(uint256 auctionId) nonpayable',
-		'function claimAuction(uint256 auctionId) nonpayable',
-
-		// Определения функций из UniswapV2Locker
-		'function getUserNumLockedTokens(address) view returns (uint256)',
-		'function getUserLockedTokenAtIndex(address, uint256) view returns (address)',
-		'function getUserNumLocksForToken(address, address) view returns (uint256)',
-		'function getUserLockForTokenAtIndex(address, address, uint256) view returns (uint256, uint256, uint256, uint256, uint256, address)',
-
-		//read methods
-		'function getUserDeals(address) external view returns (uint256[])',
-		'function getUserAuction(address) external view returns (uint256[])',
-		'function nextAuctionId() view returns (uint256)',
-		'function getAuction(uint256 auctionId) view returns (address owner, address highestBidOwner, address lpToken, uint256 lockIndex, uint256 startPrice, uint256 duration, uint256 startTime, bool isActive)',
-		'function nextDealId() view returns (uint256)',
-		'function getDeal(uint256) view returns (address, address, uint256, uint256, uint256, uint256, uint256, uint256, address, bool, bool)'
-	]);
+	private _contractInterface = require("./abi.json");
 
 	constructor() {
 		super();
@@ -81,13 +56,19 @@ export class MetamaskWallet extends TypedEmitter<WalletEvents> {
 		try {
 			const provider = new ethers.providers.JsonRpcProvider('https://eth-sepolia.g.alchemy.com/v2/1NmwpIhZyYUqzGibxMvMmrLYpqCudm4h');
 			
-			const signer = provider.getSigner("0x8fd624352279579a7c70814A4774c6772A9B99ab");
+			const signer = provider.getSigner("0x73eaD24A83df34dFAE3f7A18900266Abba351D4a");
 			
 			const address = await signer.getAddress();
 			console.log(address);
 			// const address = "0x8fd624352279579a7c70814A4774c6772A9B99ab"
 			this.address = address;
 			this._signer = signer;
+			console.log("subscribe");
+
+			this.subscribeToDealActivated();
+			this.subscribeToAuctionStarted();
+
+			console.log("subscribed to deals and auctions");
 		
 		} catch (error) {
 			console.error(error);
@@ -129,30 +110,18 @@ export class MetamaskWallet extends TypedEmitter<WalletEvents> {
 		return await contract.makeDeal(dealId);
 	}
 
-	async makeBid(auctionId: number, bidAmount: string) {
+	async activateAuction(auctionId: number){
 		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._signer);
-		return await contract.makeBid(auctionId, ethers.utils.parseEther(bidAmount));
+		return await contract.activateAuction(auctionId);
+
 	}
+
 
 	async cancelDeal(dealId: number) {
 		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._signer);
 		return await contract.cancelDeal(dealId);
 	}
 
-	async claimCollateral(dealId: number) {
-		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._signer);
-		return await contract.claimCollateral(dealId);
-	}
-
-	async repayLoan(dealId: number, amount: string) {
-		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._signer);
-		return await contract.repayLoan(dealId, ethers.utils.parseEther(amount));
-	}
-
-	async withdrawAuctionLiquidity(auctionId: number) {
-		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._signer);
-		return await contract.withdrawAuctionLiquidity(auctionId);
-	}
 
 	async claimAuction(auctionId: number) {
 		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._signer);
@@ -165,7 +134,95 @@ export class MetamaskWallet extends TypedEmitter<WalletEvents> {
 	}
 
 	
+	private subscribeToDealActivated() {
+		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._provider);
+	
+		// Subscribe to the "DealActivated" event
+		contract.on("DealActivated", async (deal_id, activator) => {
+			console.log("Deal activated with ID:", deal_id.toString());
+	
+			// Write event data to SQLite database
+			const db = new sqlite3.Database('deals.db');
+			db.serialize(() => {
+				db.run(`CREATE TABLE IF NOT EXISTS deals (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					dealId INTEGER,
+					activator TEXT
+				)`);
+	
+				const stmt = db.prepare(`INSERT INTO deals (
+					dealId,
+					activator
+				) VALUES (?, ?)`);
+				
+				stmt.run(
+					deal_id.toString(),
+					activator.toString()
+				);
+	
+				stmt.finalize();
+			});
+	
+			// Close the database connection
+			db.close();
+		});
+	}
 
+	
+	private subscribeToAuctionStarted() {
+		const contract = new ethers.Contract(this.contracts.STAKE, this._contractInterface, this._provider);
+		
+		// Subscribe to the "AuctionStarted" event
+		contract.on("AuctionStarted", async (auctionId, owner, lpToken, lockIndex, startPrice, immediatelySellPrice, bidStep, duration, immediatelySell) => {
+			console.log("Auction started with ID:", auctionId.toString());
+	
+			// Write event data to SQLite database
+			const db = new sqlite3.Database('auctions.db');
+			db.serialize(() => {
+				db.run(`CREATE TABLE IF NOT EXISTS auctions (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					auctionId INTEGER,
+					owner TEXT,
+					lpToken TEXT,
+					lockIndex INTEGER,
+					startPrice REAL,
+					immediatelySellPrice REAL,
+					bidStep REAL,
+					duration INTEGER,
+					immediatelySell INTEGER
+				)`);
+	
+				const stmt = db.prepare(`INSERT INTO auctions (
+					auctionId,
+					owner,
+					lpToken,
+					lockIndex,
+					startPrice,
+					immediatelySellPrice,
+					bidStep,
+					duration,
+					immediatelySell
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+				
+				stmt.run(
+					auctionId.toString(),
+					owner.toString(),
+					lpToken.toString(),
+					lockIndex.toString(),
+					startPrice.toString(),
+					immediatelySellPrice.toString(),
+					bidStep.toString(),
+					duration.toString(),
+					immediatelySell.toString()
+				);
+	
+				stmt.finalize();
+			});
+	
+			// Close the database connection
+			db.close();
+		});
+	}
 	public async getAllDeals(): Promise<Deal[]> {
 		try {
 			if (!this._provider) {
@@ -277,10 +334,10 @@ export class MetamaskWallet extends TypedEmitter<WalletEvents> {
 }
 const app = express();
 const wallet = new MetamaskWallet();
+wallet.connect();
 
 app.get('/get_all_deals', async (req, res) => {
     try {
-		await wallet.connect();
         const allDeals = await wallet.getAllDeals();
 
 		console.log(allDeals)
@@ -293,7 +350,6 @@ app.get('/get_all_deals', async (req, res) => {
 
 app.get('/get_all_auctions', async (req, res) => {
     try {
-		await wallet.connect();
         const allAuctions = await wallet.getAllAuctions();
 
 		console.log(allAuctions)
@@ -306,7 +362,7 @@ app.get('/get_all_auctions', async (req, res) => {
 
 app.get('/accept_deal', async (req, res) => {
     try {
-		await wallet.connect();
+		
         const accepted_deal = await wallet.makeDeal(Number(req.query.deal_id));
 
 		console.log(accepted_deal)
@@ -318,7 +374,6 @@ app.get('/accept_deal', async (req, res) => {
 });
 app.get('/cancel_deal', async (req, res) => {
     try {
-		await wallet.connect();
 		console.log(Number(req.query.deal_id));
         const canceled_deal = await wallet.cancelDeal(Number(req.query.deal_id));
 
